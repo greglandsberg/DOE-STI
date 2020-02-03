@@ -1,5 +1,5 @@
-# DOE-STI
-Python Script for the DOE STI automatic paper submission - designed for the LHC paper upload, but can be used for other accepted papers as well. The current requirement is that the paper text must be available from a public arXiv.org depository, which covers the vast majority of the HEP/astro papers. I ight include other depositories, such as CERN CDS in future releases.
+# DOE-STI - v1.1
+Python Script for the DOE STI automatic paper submission - designed for the LHC paper upload, but can be used for other accepted papers as well. The current requirement is that the paper text must be available from either the public arXiv.org depository, which covers the vast majority of the HEP/astro papers, or CERN CDS.
 
 Tested with Safari and Firefox on Mac OS X 10.15; please, report any problems under other systems
 
