@@ -8,7 +8,10 @@
 #
 #   (C) Greg Landsberg, 2020
 #   E-mail: landsberg@hep.brown.edu
+#
+#   Version history:
 #   v1.0 - 02-Feb-2020
+#   v1.1 - 03-Feb-2020 - added a CDS interface for the articles that are in CERN CDS, but not on arXiv
 #-------------------------------------------------------------------------------------
 import ssl
 import time
@@ -27,6 +30,13 @@ from selenium.common.exceptions import WebDriverException
 #
 def parseDOI(doi):  # parses either doi or arXiv reference
     value = {}
+    value[0] = ''
+    value[1] = ''
+    value[2] = ''
+    value[3] = ''
+    value[4] = ''
+    value[5] = ''
+    value[6] = ''
     arXiv = ""
     journal = ""
     volume = ""
@@ -35,6 +45,8 @@ def parseDOI(doi):  # parses either doi or arXiv reference
     DOI = ""
     ifarXiv = False
     doi = doi.strip(' .').lstrip(' ')
+    if doi == '' :
+        return value
     if 'doi:' in doi or 'DOI:' in doi :
         doi = doi[doi.find(':')+1:len(doi)]
     if 'arXiv' in doi or 'arxiv' in doi :
@@ -46,7 +58,6 @@ def parseDOI(doi):  # parses either doi or arXiv reference
         ifarXiv = True
     else :
         DOI = doi
-        
     req = urllib.request.Request("http://inspirehep.net/search?ln=en&ln=en&of=hx&action_search=Search&sf=earliestdate&so=d&rm=&rg=25&sc=0&p="+doi)
     context = ssl._create_unverified_context()
     response = urllib.request.urlopen(req,context=context)
@@ -75,15 +86,44 @@ def parseDOI(doi):  # parses either doi or arXiv reference
                 if not ifarXiv :
                     arXiv = payload + ':' + arXiv
                 break
+            elif "reportNumber" in line :   # arXiv not found, but there is a preprint number
+                value[6] = payload
     value[0] = arXiv
     value[1] = journal
     value[2] = volume
     value[3] = year
     value[4] = page
     value[5] = DOI
-    value[6] = ''
     return value
 #---------------------------------
+def getAbstractCDS(report):
+    value = {}
+    CDSURL =  "http://cds.cern.ch/search?ln=en&sc=1&action_search=Search&op1=a&m1=a&p1=&f1=&c=Articles+%26+Preprints&c=Books+%26+Proceedings&c=Presentations+%26+Talks&c=Periodicals+%26+Progress+Reports&c=Multimedia+%26+Outreach&p="+report
+    req = urllib.request.Request(CDSURL)
+    context = ssl._create_unverified_context()
+    response = urllib.request.urlopen(req,context=context)
+    page = response.read().decode("utf-8").splitlines()
+    report = ""
+    for line in page :
+        if 'class="moreinfo">' in line :    # Found the CDS record number
+            report = 'http://cds.cern.ch/' + line[line.find('<a href="')+9:line.find('?')]
+            break
+    req = urllib.request.Request(report)
+    response = urllib.request.urlopen(req,context=context)
+    page = response.read().decode("utf-8").splitlines()
+    iline = 0
+    for line in page :
+        iline += 1
+        if 'class="formatRecordLabel">' in line :    # Found the Abstract entry
+            if 'Abstract' in page[iline] :
+                abstract = page[iline+1][page[iline+1].find('">')+2:page[iline+1].find('</td></tr>')]
+        elif 'class="detailedRecordActions">Fulltext:' in line : # Found the link to the PDF text
+            report = 'http://cds.cern.ch/' + line[line.find('href=')+6:line.find('><img style')-1]
+    value[0] = abstract
+    value[1] = report
+    return value
+
+#---------------------------------------
 def getAbstract(arXiv):
     arXivURL = "http://arxiv.org/abs/"+arXiv[arXiv.find(":")+1:len(arXiv)]
     req = urllib.request.Request(arXivURL)
@@ -174,6 +214,7 @@ doi = ''
 failarXiv =[]
 failDOI = []
 failOther = []
+CDS = {}
 nSuccess = 0
 nTotal = 0
 #------------------------------------ Parsing input arguments
@@ -249,6 +290,7 @@ if list == "" :
     list = doi.splitlines()
 for doi in list :    # looping over the doi entries
     nTotal += 1
+    inCDS = False
     info = parseDOI(doi)
     arXiv = info[0]
     journal = info[1]
@@ -258,21 +300,33 @@ for doi in list :    # looping over the doi entries
     doi = info[5]
     abstract = info[6]
     if arXiv == "" :
-        print('arXiv entry not found for doi:',doi,' - skipping this entry')
-        failarXiv.append(doi)
+        if 'CERN' in abstract : # found CERN preprint
+            arXiv = abstract
+            CDS = getAbstractCDS(abstract)
+            print('The arXiv entry is not found for doi:{}, but found a CDS preprnt {}'.format(doi,abstract))
+            inCDS = True
+    if arXiv == "" :
+        if doi != '' :
+            print('arXiv entry not found for doi:',doi,' - skipping this entry')
+            failarXiv.append(doi)
+        else :
+            nTotal -= 1
     else :
-        arXivURL = "http://arxiv.org/pdf/"+arXiv[arXiv.find(":")+1:len(arXiv)] + ".pdf"
-#        abstract = getAbstract(arXiv)       # getting abstract from the arXiv
-        info = getInfoFromArXiv(info)
-        if doi == "" and info[5] != "" :
+        if inCDS :
+            abstract = CDS[0]
+            arXivURL = CDS[1]
+        else :
+            arXivURL = "http://arxiv.org/pdf/"+arXiv[arXiv.find(":")+1:len(arXiv)] + ".pdf"
+            info = getInfoFromArXiv(info)
+            if doi == "" and info[5] != "" :
+                doi = info[5]
+                print("Can't find the doi info in INSPIRE... Taking it from the arXiv:",doi,info[1])
+            journal = info[1]
+            volume = info[2]
+            year = info[3]
+            page = info[4]
             doi = info[5]
-            print("Can't find the doi info in INSPIRE... Taking it from the arXiv:",doi,info[1])
-        journal = info[1]
-        volume = info[2]
-        year = info[3]
-        page = info[4]
-        doi = info[5]
-        abstract = info[6]
+            abstract = info[6]
         if doi == "" or journal == "":
             print('doi entry not found for arXiv:',arXiv,' not a published manuscript - skipping this entry')
             failDOI.append(arXiv)
@@ -284,6 +338,13 @@ for doi in list :    # looping over the doi entries
             # Select the grant number box
             grant_box = driver.find_element_by_name('doe_contract_numbers')
             grant_box.send_keys(grantID)
+            start_time = time.time()
+            while grant_box.get_attribute('value') == '' :
+                time.sleep(0.5)
+                grant_box.send_keys(grantID)
+                if time.time() - start_time > 10:
+                    print("Grent ID field is not filled")
+                    raise WebDriverException
 
             # Select the recipient box
             id_box = driver.find_element_by_name('researchorg')
@@ -439,7 +500,7 @@ if len(failarXiv) > 0 :
     for paper in failarXiv :
         print(paper)
 if len(failDOI) > 0 :
-    print('The following papers are not Accepted Publication and have not been sumbmitted:')
+    print('The following papers are not Accepted Publications and have not been sumbmitted:')
     for paper in failDOI :
       print(paper)
 if len(failOther) > 0 :
