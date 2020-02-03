@@ -45,6 +45,7 @@ def parseDOI(doi):  # parses either doi or arXiv reference
     DOI = ""
     ifarXiv = False
     doi = doi.strip(' .').lstrip(' ')
+    doi = doi.replace(' ','')
     if doi == '' :
         return value
     if 'doi:' in doi or 'DOI:' in doi :
