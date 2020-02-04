@@ -55,6 +55,8 @@ def parseDOI(doi):  # parses either doi or arXiv reference
     if 'arXiv' in doi or 'arxiv' in doi :
         if ' ' in doi :
             doi = doi[doi.find(':')+1:doi.find(' ')]
+        elif '[' in doi :
+            doi = doi[doi.find(':')+1:doi.find('[')]
         else :
             doi = doi[doi.find(':')+1:len(doi)]
         arXiv = 'arXiv:'+doi
@@ -512,7 +514,7 @@ if len(failarXiv) > 0 :
     for paper in failarXiv :
         print(paper)
 if len(failDOI) > 0 :
-    print('The following papers are not Accepted Publications and have not been sumbmitted:')
+    print('The following papers are not Accepted Manuscripts and have not been submitted:')
     for paper in failDOI :
       print(paper)
 if len(failOther) > 0 :
