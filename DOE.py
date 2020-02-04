@@ -45,7 +45,9 @@ def parseDOI(doi):  # parses either doi or arXiv reference
     DOI = ""
     ifarXiv = False
     doi = doi.strip(' .').lstrip(' ')
-    doi = doi.replace(' ','')
+    while '  ' in doi :
+        doi = doi.replace('  ',' ')
+    doi = doi.replace(': ',':')
     if doi == '' :
         return value
     if 'doi:' in doi or 'DOI:' in doi :
@@ -151,11 +153,15 @@ def getInfoFromArXiv(invalue):
     page = invalue[4]
     DOI = invalue[5]
     value = invalue
+    webpage = []
     arXivURL = "https://arxiv.org/abs/"+arXiv[arXiv.find(":")+1:len(arXiv)]
     req = urllib.request.Request(arXivURL)
     context = ssl._create_unverified_context()
-    response = urllib.request.urlopen(req,context=context)
-    webpage = response.read().decode("utf-8").splitlines()
+    try :
+        response = urllib.request.urlopen(req,context=context)
+        webpage = response.read().decode("utf-8").splitlines()
+    except:
+        print('Error - cant open Webpage:',arXivURL)
     abstract = ""
     injref = ""
     abs = False
@@ -186,6 +192,8 @@ def getInfoFromArXiv(invalue):
             abs = True
         elif abs and not '</blockquote>' in line :
             abstract += "\n" + line
+        elif abs :
+            abs = False
     value[0] = arXiv
     if value[1] == "" :
         value[1] = journal
@@ -356,8 +364,6 @@ for doi in list :    # looping over the doi entries
             id_product.select_by_visible_text('Accepted Manuscript of Journal Article')
 
             # Click the doi radio button
-            #list = driver.find_element_by_id('isDoiAssoc1').click()
-
             element = driver.find_element_by_css_selector("input[type='radio'][value='Y']")
             driver.execute_script("arguments[0].click();", element)
 
@@ -411,12 +417,17 @@ for doi in list :    # looping over the doi entries
                 driver.execute_script("arguments[0].click();", element)
                 element.send_keys('')
 
-            spon_product = Select(driver.find_element_by_xpath("//select[@class='form-control update_textarea col-xs-12' and @id='spon']"))
-            spon_product.select_by_value(office)
-
             # Select the product type box
             id_product = Select(driver.find_element_by_id('cat'))
             id_product.select_by_value(category)
+
+            try :
+#                spon_product = Select(driver.find_element_by_xpath("//select[@class='form-control update_textarea col-xs-12' and @name='spon']"))
+                spon_product = Select(driver.find_element_by_id('spon'))
+                spon_product.select_by_value(office)
+            except:
+                print('Exception caught on p.4, recovering', end = '...')
+                time.sleep(1.0)
 
             elem1= driver.find_element_by_xpath("//ul[@role='menu']")
             elem2= elem1.find_element_by_xpath(".//a[@href='#next']")
@@ -489,7 +500,7 @@ for doi in list :    # looping over the doi entries
             file_object.close()
             if success :
                 nSuccess += 1
-                print('Submision was sucessful')
+                print('Submission was sucessful')
             else :
                 print('Problems with the submission; please check the {} file for more information'.format(doi.replace('/','.')+'.html'))
                 failOther.append(doi)
