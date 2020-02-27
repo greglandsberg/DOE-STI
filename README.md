@@ -43,7 +43,7 @@ python3 DOE.py [--help] [-d doi] [-f doi_list_file] [-c [DOE.cfg]] [-b Safari|Fi
 
 Here the [-d doi] is an option to run the script for a single doi or arXiv references. The system is flexible enough to discard irrelevant information; below are examples of the "doi" filed that all work fine:
 
-arXiv:1909.04721
+arXiv:1909.04721 
 doi:10.1103/PhysRevLett.122.132001
 10.1007/JHEP03(2019)082.
 10.1007/JHEP03(2019)026
