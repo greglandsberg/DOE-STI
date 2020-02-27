@@ -234,7 +234,7 @@ if len(sys.argv) > 1 :
     for line in sys.argv :
         iline += 1
         if "--help" in line :
-            print("Usage: python3 ",sys.argv[0]," -d DOI [--help] [-b Safari|Firefox")
+            print("Usage: python3 ",sys.argv[0]," [--help] [-d doi] [-f doi_list_file] [-c [DOE.cfg]] [-b Safari|Firefox]")
             exit()
         elif "-d" in line :
             doi = sys.argv[iline]
