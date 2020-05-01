@@ -63,7 +63,7 @@ def parseDOI(doi):  # parses either doi or arXiv reference
         ifarXiv = True
     else :
         DOI = doi
-    req = urllib.request.Request("http://inspirehep.net/search?ln=en&ln=en&of=hx&action_search=Search&sf=earliestdate&so=d&rm=&rg=25&sc=0&p="+doi)
+    req = urllib.request.Request("http://old.inspirehep.net/search?ln=en&ln=en&of=hx&action_search=Search&sf=earliestdate&so=d&rm=&rg=25&sc=0&p="+doi)
     context = ssl._create_unverified_context()
     response = urllib.request.urlopen(req,context=context)
     INSPIREentry=response.read().decode("utf-8").splitlines()
